@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Event Search</title>
+    <!-- Include Bootstrap CSS from a CDN -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #fff;
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+
+
+
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-4">
+            <h1>Search Events</h1>
+            <form>
+                <div class="form-group position-relative">
+                    <label for="city">City:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="city" name="city" oninput="typeAhead(this)">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" id="cityClear"
+                                    onclick="clearCity()">X
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="dateFrom">Date from:</label>
+                    <input type="date" class="form-control" id="dateFrom" name="dateFrom">
+                </div>
+                <div class="form-group">
+                    <label for="dateTo">Date to:</label>
+                    <input type="date" class="form-control" id="dateTo" name="dateTo">
+                </div>
+                <button type="button" class="btn btn-primary" onclick="filterData()">Search</button>
+            </form>
+        </div>
+
+        <div class="col-sm-8">
+            <table class="table" id="resultTable">
+                <thead class="thead-white">
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Home Team</th>
+                    <th scope="col">Away Team</th>
+                    <th scope="col">Venue</th>
+                    <th scope="col">Venue Address</th>
+                    <th scope="col">City</th>
+                    <th scope="col">Type</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+        var data = [];
+
+        // Fetch data from JSON file
+        fetch('schedule.json')
+            .then(response => response.json())
+            .then(json => data = json)
+            .catch(error => console.error('Error:', error));
+
+        function typeAhead(input) {
+            var val = input.value;
+            closeAllLists();
+            if (!val) { return false;}
+            var autocompleteList = document.createElement("DIV");
+            autocompleteList.setAttribute("id", input.id + "autocomplete-list");
+            autocompleteList.setAttribute("class", "autocomplete-items");
+            input.parentNode.appendChild(autocompleteList);
+            var cities = [...new Set(data.map(event => event.venue_location))].filter(Boolean);
+            for (i = 0; i < cities.length; i++) {
+                if (cities[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+                    var item = document.createElement("DIV");
+                    item.innerHTML = "<strong>" + cities[i].substr(0, val.length) + "</strong>";
+                    item.innerHTML += cities[i].substr(val.length);
+                    item.innerHTML += "<input type='hidden' value='" + cities[i] + "'>";
+                    item.addEventListener("click", function(e) {
+                        input.value = this.getElementsByTagName("input")[0].value;
+                        closeAllLists();
+                    });
+                    autocompleteList.appendChild(item);
+                }
+            }
+        }
+
+        function closeAllLists(elmnt) {
+            var x = document.getElementsByClassName("autocomplete-items");
+            for (var i = 0; i < x.length; i++) {
+                if (elmnt != x[i] && elmnt != city) {
+                    x[i].parentNode.removeChild(x[i]);
+                }
+            }
+        }
+
+        document.addEventListener("click", function (e) {
+            closeAllLists(e.target);
+        });
+
+        function filterData() {
+            var city = document.getElementById('city').value;
+            var dateFrom = new Date(document.getElementById('dateFrom').value);
+            var dateTo = new Date(document.getElementById('dateTo').value);
+
+            var filteredData = data.filter(function (item) {
+                var itemDate = new Date(item.date);
+                return item.venue_location !== null && item.venue_location.includes(city) &&
+                    itemDate >= dateFrom && itemDate <= dateTo;
+            });
+
+            var resultTable = document.getElementById('resultTable');
+            resultTable.innerHTML = '<thead><tr><th>Date</th><th>Time</th><th>Home Team</th><th>Away Team</th><th>Venue</th><th>Venue Address</th><th>City</th><th>Type</th></tr></thead>';
+
+            filteredData.forEach(function (item) {
+                var row = document.createElement('tr');
+                row.innerHTML = '<td>' + new Date(item.date).toISOString().split('T')[0] + '</td><td>' + item.time + '</td><td>' + item.home_team_name + '</td><td>' + item.away_team_name + '</td><td>' + item.venue + '</td><td>' + item.venue_address + '</td><td>' + item.venue_location + '</td><td>' + item.type + '</td>';
+                resultTable.appendChild(row);
+            });
+        }
+        
+        function clearCity() {
+            document.getElementById('city').value = '';
+        }
+
+
+
+
+</script>
+</body>
+</html>
