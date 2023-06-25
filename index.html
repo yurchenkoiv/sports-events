@@ -130,15 +130,20 @@
             closeAllLists(e.target);
         });
 
+        function getMidnight(date) {
+            return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+        }
+
         function filterData() {
             var city = document.getElementById('city').value;
-            var dateFrom = new Date(document.getElementById('dateFrom').value);
-            var dateTo = new Date(document.getElementById('dateTo').value);
+            var dateFrom = getMidnight(new Date(document.getElementById('dateFrom').value));
+            var dateTo = getMidnight(new Date(document.getElementById('dateTo').value));
+            dateTo.setHours(23,59,59);
 
             var filteredData = data.filter(function (item) {
                 var itemDate = new Date(item.date);
                 return item.venue_location !== null && item.venue_location.includes(city) &&
-                    itemDate >= dateFrom && itemDate <= dateTo;
+                    itemDate.getTime() >= dateFrom.getTime() && itemDate.getTime() <= dateTo.getTime();
             });
 
             var resultTable = document.getElementById('resultTable');
@@ -146,11 +151,11 @@
 
             filteredData.forEach(function (item) {
                 var row = document.createElement('tr');
-                row.innerHTML = '<td>' + new Date(item.date).toISOString().split('T')[0] + '</td><td>' + item.time + '</td><td>' + item.home_team_name + '</td><td>' + item.away_team_name + '</td><td>' + item.venue + '</td><td>' + item.venue_address + '</td><td>' + item.venue_location + '</td><td>' + item.type + '</td>';
+                row.innerHTML = '<td>' + new Date(item.date + 'Z').toISOString().split('T')[0] + '</td><td>' + item.time + '</td><td>' + item.home_team_name + '</td><td>' + item.away_team_name + '</td><td>' + item.venue + '</td><td>' + item.venue_address + '</td><td>' + item.venue_location + '</td><td>' + item.type + '</td>';
                 resultTable.appendChild(row);
             });
         }
-        
+
         function clearCity() {
             document.getElementById('city').value = '';
         }
