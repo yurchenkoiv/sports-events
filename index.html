@@ -32,12 +32,15 @@
 
 
 
+
+
+
     </style>
 </head>
 <body>
 <div class="container">
     <div class="row">
-        <div class="col-sm-4">
+        <div class="col-lg-3">
             <h1>Search Events</h1>
             <form>
                 <div class="form-group position-relative">
@@ -59,12 +62,25 @@
                     <label for="dateTo">Date to:</label>
                     <input type="date" class="form-control" id="dateTo" name="dateTo">
                 </div>
-                <button type="button" class="btn btn-primary" onclick="filterData()">Search</button>
+                <div class="form-group">
+                    <label for="dateTo">Radius:</label>
+                    <input type="number" class="form-control" id="radius" name="radius" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-primary mr-2" onclick="filterData()">Search</button>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="radiusCheck">
+                            <label class="form-check-label" for="radiusCheck">Search in radius</label>
+                        </div>
+                    </div>
+                </div>
+
             </form>
         </div>
 
-        <div class="col-sm-8">
-            <table class="table" id="resultTable">
+        <div class="col-lg-9">
+            <table class="table table-responsive-lg" id="resultTable">
                 <thead class="thead-white">
                 <tr>
                     <th scope="col">Date</th>
@@ -92,6 +108,11 @@
             .then(response => response.json())
             .then(json => data = json)
             .catch(error => console.error('Error:', error));
+
+
+
+        document.getElementById('dateFrom').valueAsDate = new Date();
+        document.getElementById('dateTo').valueAsDate = new Date();
 
         function typeAhead(input) {
             var val = input.value;
@@ -139,11 +160,31 @@
             var dateFrom = getMidnight(new Date(document.getElementById('dateFrom').value));
             var dateTo = getMidnight(new Date(document.getElementById('dateTo').value));
             dateTo.setHours(23,59,59);
+            var radiusCheck = document.getElementById('radiusCheck').checked;
+            var radius = document.getElementById('radius').value;
+            var cityLat = data.filter(function (item) {
+                return item.venue_location === city;
+            })[0].latitude;
+            var cityLng = data.filter(function (item) {
+                return item.venue_location === city;
+            })[0].longitude;
 
             var filteredData = data.filter(function (item) {
                 var itemDate = new Date(item.date);
-                return item.venue_location !== null && item.venue_location.includes(city) &&
+
+                if (radiusCheck) {
+                    var hasRadius = radius != 0 || radius != '';
+                    var itemHasCoordinates = item.latitude !== null && item.longitude !== null;
+                    var distance = 1000000;
+                    if (itemHasCoordinates) {
+                        distance = getDistance(cityLat, cityLng, item.latitude, item.longitude);
+                    }
+                    return item.venue_location !== null && (item.venue_location.includes(city) || distance <= radius) &&
+                        itemDate.getTime() >= dateFrom.getTime() && itemDate.getTime() <= dateTo.getTime();
+                } else {
+                    return item.venue_location !== null && item.venue_location.includes(city) &&
                     itemDate.getTime() >= dateFrom.getTime() && itemDate.getTime() <= dateTo.getTime();
+                }
             });
 
             var resultTable = document.getElementById('resultTable');
@@ -159,6 +200,38 @@
         function clearCity() {
             document.getElementById('city').value = '';
         }
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth's radius in meters
+            const lat1Radians = lat1 * Math.PI / 180; // Latitude of first point converted to radians
+            const lat2Radians = lat2 * Math.PI / 180; // Latitude of second point converted to radians
+            const deltaLat = (lat2 - lat1) * Math.PI / 180; // Change in latitude converted to radians
+            const deltaLon = (lon2 - lon1) * Math.PI / 180; // Change in longitude converted to radians
+
+            const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                    Math.cos(lat1Radians) * Math.cos(lat2Radians) *
+                    Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            const d = R * c; // Distance in meters
+            // Distance in miles
+            const dMiles = d / 1609.344;
+            return dMiles;
+        }
+
+        function sortByDistance(items, lat, lon) {
+            items.sort((a, b) => {
+                const distanceToA = getDistance(lat, lon, a.latitude, a.longitude);
+                const distanceToB = getDistance(lat, lon, b.latitude, b.longitude);
+                return distanceToA - distanceToB;
+            });
+        }
+
+
+
+
+
 
 
 
